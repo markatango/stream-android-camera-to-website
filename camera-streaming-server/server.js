@@ -1,6 +1,7 @@
 // server.js
 require('dotenv').config();
 
+const { auth: firebaseAuth, db } = require('./services/firebaseAdmin');
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -8,9 +9,12 @@ const cors = require('cors');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
-const { auth: firebaseAuth, db } = require('./services/firebaseAdmin');
 
 const app = express();
+
+// CRITICAL: Trust specific proxy (Nginx) instead of all proxies
+app.set('trust proxy', 1); // Trust first proxy (Nginx)
+
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -48,12 +52,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate limiting
+// Rate limiting - will now work correctly with trust proxy
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 app.use(limiter);
+
 
 // Store active sessions and authentication tokens
 const activeSessions = new Map();
