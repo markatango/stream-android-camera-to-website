@@ -1,0 +1,169 @@
+.App {
+  text-align: center;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+}
+
+.connection-status {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.device-selection {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.device-selection select {
+  padding: 10px;
+  margin: 0 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 300px;
+}
+
+.camera-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.camera-controls {
+  margin-bottom: 20px;
+}
+
+.camera-controls button {
+  padding: 10px 20px;
+  margin: 0 10px;
+  border: none;
+  border-radius: 4px;
+  background: #007bff;
+  color: white;
+  cursor: pointer;
+}
+
+.camera-controls button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.video-container {
+  position: relative;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.video-container video,
+.video-container canvas {
+  width: 100%;
+  max-width: 800px;
+  height: auto;
+}
+
+.snapshots-section {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.snapshots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.snapshot-item {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.snapshot-item img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+
+.snapshot-info {
+  padding: 10px;
+  background: #f9f9f9;
+  font-size: 12px;
+}
+
+.snapshot-info button {
+  margin-top: 5px;
+  padding: 5px 10px;
+  border: none;
+  background: #28a745;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Performance Stats Styling */
+.performance-stats {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.performance-stats h3 {
+  margin: 0 0 10px 0;
+  color: #495057;
+  font-size: 16px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+}
+
+.stats-grid > div {
+  background: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.clear-buffer-button {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.clear-buffer-button:hover {
+  background-color: #ffb300 !important;
+}
+
+/* Performance indicators */
+.performance-stats .stats-grid > div:nth-child(2) {
+  color: #28a745; /* Green for latency */
+}
+
+.performance-stats .stats-grid > div:nth-child(5) {
+  color: #dc3545; /* Red for drop rate */
+}

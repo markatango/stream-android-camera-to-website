@@ -1,0 +1,295 @@
+/* AuthPage.css */
+
+/* Container and Layout */
+.auth-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.auth-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: 450px;
+    width: 100%;
+}
+
+/* Header Styling */
+.auth-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.auth-title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #374151;
+    margin: 0 0 12px 0;
+}
+
+.auth-subtitle {
+    color: #6B7280;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* Screen Titles */
+.screen-title, .form-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #374151;
+    text-align: center;
+    margin: 0 0 24px 0;
+}
+
+.screen-description {
+    color: #6B7280;
+    text-align: center;
+    line-height: 1.5;
+    margin-bottom: 32px;
+}
+
+/* Icon Circles */
+.icon-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px auto;
+    font-size: 1.5rem;
+}
+
+.email-icon {
+    background: #DBEAFE;
+}
+
+.reset-icon {
+    background: #FED7AA;
+}
+
+/* Form Styling */
+.form-fields {
+    margin-bottom: 32px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.9);
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-input::placeholder {
+    color: #9CA3AF;
+}
+
+/* Button Styling */
+.btn {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    box-sizing: border-box;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Button Variants */
+.btn-primary {
+    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #2563EB, #1E40AF);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6B7280, #4B5563);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #5B6470, #404854);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #10B981, #047857);
+    color: white;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #059669, #065F46);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: white;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #E08E0B, #C7740A);
+}
+
+/* Button Layout */
+.button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.button-row {
+    display: flex;
+    gap: 12px;
+}
+
+.full-width {
+    width: 100%;
+}
+
+.half-width {
+    flex: 1;
+}
+
+/* Verification Screen */
+.verification-screen, .forgot-password-screen {
+    text-align: center;
+}
+
+.verification-content {
+    margin-bottom: 32px;
+}
+
+/* Message Display */
+.message {
+    margin-top: 24px;
+    padding: 16px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.message p {
+    margin: 0;
+}
+
+.message-success {
+    background: #ECFDF5;
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+}
+
+.message-error {
+    background: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #FECACA;
+}
+
+/* Footer */
+.auth-footer {
+    margin-top: 32px;
+    text-align: center;
+}
+
+.auth-footer p {
+    font-size: 0.75rem;
+    color: #9CA3AF;
+    margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .auth-container {
+        padding: 16px;
+    }
+    
+    .auth-card {
+        padding: 24px;
+        border-radius: 16px;
+    }
+    
+    .auth-title {
+        font-size: 1.75rem;
+    }
+    
+    .button-row {
+        flex-direction: column;
+    }
+    
+    .half-width {
+        width: 100%;
+    }
+}
+
+/* Loading states and animations */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+/* Focus states for accessibility */
+.btn:focus {
+    outline: 2px solid #3B82F6;
+    outline-offset: 2px;
+}
+
+/* Smooth transitions */
+* {
+    box-sizing: border-box;
+}
+
+.auth-card * {
+    transition: all 0.2s ease;
+}
