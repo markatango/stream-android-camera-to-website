@@ -7,7 +7,7 @@ This software allows an Android phone to stream video from its camera to a websi
 ## Tested platform versions
 * __Server and client__:
 
-node version: 18.18.0
+node version: 20,0,0
 
 npm version: 9.8.1
 
@@ -30,6 +30,22 @@ DEVICE_SECRET=<your-secret-key>
 FRONTEND_URL=<http://<frontend server url:port> // needed for websocket to push things to the client
 NODE_ENV=production
 ```
+
+3. Create a file `services/service-account-key.json` in the server root folder and populate with your firebase service account info something like this:
+```
+{
+  "type": "service_account",
+  "project_id": "your-project-id",
+  "private_key_id": "abc123...",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-xyz@your-project.iam.gserviceaccount.com",
+  "client_id": "123456789012345678901",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-xyz%40your-project.iam.gserviceaccount.com"
+}
+```
 3. Run `npm start` to start the server.
 
 ### Web client installation
@@ -37,10 +53,12 @@ NODE_ENV=production
 2. Create a `.env` file in the client root folder with the following contents:
  ```
  REACT_APP_BACKEND_URL=http://<backend server ip:port>
+  ...
+  REACT_APP_environment variables for firebase authentication and firestore database.
  ```
 3. Run `npm start` to start the client in your web browser.
 
-Alternatively, run `npm run build` to build a performant client. Host the client `/build` package on the same machine as the server (or adjust endpoints, above, as needed).  Here is an example of a location block detail for NGINX:
+Alternatively, run `npm run build` to build a performant client. Host the client `/build` package on the same machine as the server (or adjust endpoints, above, as needed).  Here is an example of a location block detail for NGINX running on a local machine:
 
 ```
         location /remotecamera {
@@ -64,6 +82,7 @@ Alternatively, run `npm run build` to build a performant client. Host the client
         #========================================================
 
 ```
+See `nginx server block` and `environment variables for SSL server` for deployment on a remote server with full authentication hooks.   Adjust as needed for your implementation.
 
 ### Android application build and installation
 1. Open the Android project in Android Studio.
@@ -76,7 +95,7 @@ Alternatively, run `npm run build` to build a performant client. Host the client
 6. Clean and build project. The app will download to your phone.
 
 ## Operation
-This is pretty self-explanatory.
+This is pretty self-explanatory.  The `main` branch supports firebase authentication.  So after creating an account and logging in:
 1. Open the app on your Android phone.
 2. Press "Connect".
 3. Refresh the webpage, or press the `Refresh Devices` button on the webpage.
