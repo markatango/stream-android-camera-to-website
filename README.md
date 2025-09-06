@@ -31,7 +31,7 @@ FRONTEND_URL=<http://<frontend server url:port> // needed for websocket to push 
 NODE_ENV=production
 ```
 
-3. Create a file `services/service-account-key.json` in the server root folder and populate with your firebase service account info something like this:
+3. Create a file `config/service-account-key.json` in the server root folder and populate with your firebase service account info something like this:
 ```
 {
   "type": "service_account",
@@ -46,43 +46,29 @@ NODE_ENV=production
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-xyz%40your-project.iam.gserviceaccount.com"
 }
 ```
-3. Run `npm start` to start the server.
+
+3. Create a file `services/firebaseAdmin.js` and populate it code snippet found at <firebase_project>Project Overview> -> Project Settings -> Service accounts,  something like:
+```
+var admin = require("firebase-admin");
+var serviceAccount = require("path/to/serviceAccountKey.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+```
+
+4. Run `npm start` to start the server.
 
 ### Web client installation
 1. Run `npm install` to populate the node_modules.
 2. Create a `.env` file in the client root folder with the following contents:
  ```
  REACT_APP_BACKEND_URL=http://<backend server ip:port>
-  ...
-  REACT_APP_environment variables for firebase authentication and firestore database.
+       ...
+ REACT_APP_environment variables for firebase authentication and firestore database.
  ```
 3. Run `npm start` to start the client in your web browser.
 
-Alternatively, run `npm run build` to build a performant client. Host the client `/build` package on the same machine as the server (or adjust endpoints, above, as needed).  Here is an example of a location block detail for NGINX running on a local machine:
-
-```
-        location /remotecamera {
-              alias /var/www/html/remotecamera;
-              try_files $uri $uri/ /remotecamera/index.html;
-        }
-
-        ## eliminate the following temporary fixes by including {"homepage":"/remotecamera"} in package.json and rebuild.
-        #========================================================
-        # Handle static assets
-        location /static/ {
-              alias /var/www/html/remotecamera/static/;
-              expires 1y;
-              add_header Cache-Control "public, immutable";
-        }
-
-        # Handle common root files
-        location ~* ^/(manifest\.json|robots\.txt|favicon\.ico|logo192\.png)$ {
-            root /var/www/html/remotecamera;
-        }
-        #========================================================
-
-```
-See `nginx server block` and `environment variables for SSL server` for deployment on a remote server with full authentication hooks.   Adjust as needed for your implementation.
+Alternatively, run `npm run build` to build a performant client. See `nginx server block` and `environment variables for SSL server` for deployment on a remote server with full authentication hooks.   Adjust as needed for your implementation.
 
 ### Android application build and installation
 1. Open the Android project in Android Studio.
