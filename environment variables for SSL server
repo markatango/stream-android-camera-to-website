@@ -1,0 +1,16 @@
+# 1. Camera Server .env file (camera-streaming-server/.env)
+PORT=3001
+DEVICE_SECRET=your-secret-key
+FRONTEND_URL=https://<your domain>/camera
+NODE_ENV=production
+
+# 2. Camera Client .env file (camera-streaming-viewer/.env)
+REACT_APP_BACKEND_URL=https://<your domain>
+
+# 3. Android app CameraService.kt update
+# In android-streaming-app/app/src/main/java/com/example/camerastreamapp/CameraService.kt
+# Change line ~45:
+private const val SERVER_URL = "<your domain>"
+
+# 4. Android local.properties (same as before)
+DEVICE_SECRET=your-secret-key
