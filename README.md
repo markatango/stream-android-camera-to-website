@@ -47,16 +47,7 @@ NODE_ENV=production
 }
 ```
 
-3. Create a file `services/firebaseAdmin.js` and populate it code snippet found at <firebase_project>Project Overview> -> Project Settings -> Service accounts,  something like:
-```
-var admin = require("firebase-admin");
-var serviceAccount = require("path/to/serviceAccountKey.json");
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
-```
-
-4. Run `npm start` to start the server.
+3. Run `npm start` to start the server.
 
 ### Web client installation
 1. Run `npm install` to populate the node_modules.
