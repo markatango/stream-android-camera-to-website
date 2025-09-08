@@ -5,7 +5,16 @@
 ![Node.js](https://img.shields.io/badge/node.js-v20.0.0-brightgreen.svg)
 ![React](https://img.shields.io/badge/react-v19.1.1-blue.svg)
 ![Android](https://img.shields.io/badge/android-API%2024%2B-green.svg)
+![Socket.IO](https://img.shields.io/badge/Socket.IO-v4.8.1-black.svg)
+![Firebase](https://img.shields.io/badge/Firebase-Admin-orange.svg)
+![CameraX](https://img.shields.io/badge/CameraX-latest-green.svg)
+![Express](https://img.shields.io/badge/Express-v5.1.0-lightgrey.svg)
+![Latency](https://img.shields.io/badge/latency-%3C500ms-success.svg)
+![Frame Rate](https://img.shields.io/badge/frame%20rate-2--30%20FPS-blue.svg)
+![Compression](https://img.shields.io/badge/compression-85%25%20reduction-green.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
+![Deployment](https://img.shields.io/badge/deployment-live-brightgreen.svg)
+![Server](https://img.shields.io/badge/server-data--dancer.com-blue.svg)
 
 This repo comprises an Android app, a web server, and a web client.
 
@@ -35,7 +44,7 @@ Assumes you know your way around Android Studio and a node/react web server.
 ```
 PORT=<server port number>
 DEVICE_SECRET=<your-secret-key>
-FRONTEND_URL=<http://<frontend server url:port> // needed for websocket to push things to the client
+FRONTEND_URL=<http://<frontend server url> // needed for websocket to push things to the client; port is not needed if using the example nginx server block.
 NODE_ENV=production
 ```
 
