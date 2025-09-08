@@ -45,8 +45,16 @@ class CameraService : Service(), LifecycleOwner {
         private val SERVER_URL = BuildConfig.SERVER_URL
         private val DEVICE_SECRET = BuildConfig.DEVICE_SECRET // Replace with your secret
 
-        private const val STREAM_FRAME_RATE = 5 // Frames per second (adjust for performance)
-        private const val JPEG_QUALITY = 70 // JPEG quality (1-100)
+        // REMOTE SERVER OPTIMIZATION
+		private const val STREAM_FRAME_RATE = 2      // Much slower for remote
+		private const val JPEG_QUALITY = 30          // Very low quality for remote
+		// private const val MAX_IMAGE_WIDTH = 480      // Even smaller resolution
+		// private const val MAX_IMAGE_HEIGHT = 320     // Even smaller resolution
+		
+		private var lastFrameSentTime = 0L
+		private val frameInterval = 1000L / STREAM_FRAME_RATE  // milliseconds between frames
+    
+}
     }
 
     // Lifecycle management
@@ -169,9 +177,9 @@ class CameraService : Service(), LifecycleOwner {
 
             // Image analysis for streaming
             imageAnalyzer = ImageAnalysis.Builder()
-                .setTargetResolution(android.util.Size(640, 480))
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
+				.setTargetResolution(android.util.Size(480, 320))  // Changed from (640, 480)
+				.setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+				.build()
             Log.d(TAG, "ImageAnalysis created")
 
             imageAnalyzer?.setAnalyzer(cameraExecutor) { imageProxy ->
