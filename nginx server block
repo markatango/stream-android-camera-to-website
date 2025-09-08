@@ -4,13 +4,13 @@ server {
     listen [::]:80;
 
     listen 443 ssl; # managed by Certbot
-    listen [::]:443 ssl ipv6only=on; # managed by Certbot
-    ssl_certificate /etc/letsencrypt/live/data-dancer.com/fullchain.pem; # managed by Certbot
-    ssl_certificate_key /etc/letsencrypt/live/data-dancer.com/privkey.pem; # managed by Certbot
+    listen [::]:443 ssl ipv6only=on; 
+    ssl_certificate /path/to/your/certificate.pem;
+    ssl_certificate_key /path/to/your/private/key.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
 
-    server_name data-dancer.com www.data-dancer.com;
+    server_name <your domain> www.<your domain;
 
     root /var/www/html;
     index index.html;
