@@ -13,8 +13,7 @@
 ![Frame Rate](https://img.shields.io/badge/frame%20rate-2--30%20FPS-blue.svg)
 ![Compression](https://img.shields.io/badge/compression-85%25%20reduction-green.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
-![Deployment](https://img.shields.io/badge/deployment-live-brightgreen.svg)
-![Server](https://img.shields.io/badge/server-data--dancer.com-blue.svg)
+
 
 This repo comprises an Android app, a web server, and a web client.
 
