@@ -13,6 +13,8 @@ const helmet = require('helmet');
 const FRAME_INTERVAL = 100; // Limit to 10 FPS (100ms between frames)
 const frameTimestamps = new Map(); // Track last frame time per device
 
+const compression = require('compression');
+
 const app = express();
 
 // CRITICAL: Trust specific proxy (Nginx) instead of all proxies
@@ -23,7 +25,9 @@ const io = socketIo(server, {
   cors: {
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     methods: ["GET", "POST"]
-  }
+  },
+  compression: true,        // Enable Socket.IO compression
+  perMessageDeflate: true   // Enable WebSocket compression
 });
 
 // Security middleware
@@ -32,6 +36,11 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || "http://localhost:3000"
 }));
 app.use(express.json());
+
+app.use(compression({
+  threshold: 1024, // Only compress if larger than 1KB
+  level: 6         // Good balance of speed vs compression
+}));
 
 // Enhanced logging middleware
 app.use((req, res, next) => {
@@ -373,25 +382,16 @@ io.on('connection', (socket) => {
   });
   
   // Handle camera stream data from Android device
-  socket.on('camera-stream', (data) => {
-  const timestamp = new Date().toISOString();
+socket.on('camera-stream', (data) => {
   const now = Date.now();
   
-  // Frame rate limiting
-  const lastFrameTime = frameTimestamps.get(socket.deviceId) || 0;
-  if (now - lastFrameTime < FRAME_INTERVAL) {
-    // Skip this frame to prevent overwhelming
-    return;
-  }
-  frameTimestamps.set(socket.deviceId, now);
-  
-  // Update last activity and store last frame (mobile devices only)
+  // Update session with minimal processing
   if (!socket.isWebClient) {
     const session = activeSessions.get(socket.deviceId);
     if (session) {
       session.lastActivity = now;
       
-      // Clear previous frame before storing new one (prevent memory accumulation)
+      // Memory management: clear old frame
       if (session.lastFrame) {
         delete session.lastFrame;
       }
@@ -399,29 +399,18 @@ io.on('connection', (socket) => {
     }
   }
   
-  // Broadcast to viewers (frontend clients)
+  // Minimal broadcast data
   const broadcastData = {
     deviceId: socket.deviceId,
     frame: data.frame,
     timestamp: now
   };
   
-  // More efficient broadcasting - only to web clients
-  const webClients = [];
-  io.sockets.sockets.forEach((clientSocket) => {
+  // Direct emission to web clients (most efficient)
+  for (const [socketId, clientSocket] of io.sockets.sockets) {
     if (clientSocket.isWebClient) {
-      webClients.push(clientSocket);
+      clientSocket.compress(true).emit('camera-feed', broadcastData);
     }
-  });
-  
-  // Broadcast to all web clients
-  webClients.forEach(clientSocket => {
-    clientSocket.emit('camera-feed', broadcastData);
-  });
-  
-  // Occasional logging (every 50th frame)
-  if (frameTimestamps.get(socket.deviceId) % 5000 < FRAME_INTERVAL) {
-    console.log(`[${timestamp}] 📡 Broadcasted frame to ${webClients.length} web clients`);
   }
 });
   
