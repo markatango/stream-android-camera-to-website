@@ -65,7 +65,7 @@ Alternatively, run `npm run build` to build a performant client. See `nginx serv
 1. Open the Android project in Android Studio.
 2. Add the following lines to `local.properties` file in the root folder:
    - `DEVICE_SECRET=<your-secret-key>` to the `local.properties` //  Make sure this value matches the one you put in the server `.env` file.
-   - `SERVER_URL=http://<your server ip:port>`
+   - `SERVER_URL=http://<your server ip>`  # Note: port number is not needed if you use something like the example NGINX server block.
 3. Enable Developer Mode on your Android phone.  Note: consult the Internet to learn how to do this.
 4. Connect your Android phone to Android Studio. (The USB debug mode seems to be more reliable than the Wifi debug mode).
 5. Sync gradle.
