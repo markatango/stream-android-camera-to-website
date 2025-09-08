@@ -10,6 +10,9 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 
+const FRAME_INTERVAL = 100; // Limit to 10 FPS (100ms between frames)
+const frameTimestamps = new Map(); // Track last frame time per device
+
 const app = express();
 
 // CRITICAL: Trust specific proxy (Nginx) instead of all proxies
@@ -371,37 +374,56 @@ io.on('connection', (socket) => {
   
   // Handle camera stream data from Android device
   socket.on('camera-stream', (data) => {
-    const timestamp = new Date().toISOString();
-    // console.log(`[${timestamp}] 📹 Camera stream data received from ${socket.deviceId}`);
-    // console.log(`[${timestamp}] Frame size: ${data.frame ? `${data.frame.length} chars` : 'missing'}`);
-    
-    // Update last activity and store last frame (mobile devices only)
-    if (!socket.isWebClient) {
-      const session = activeSessions.get(socket.deviceId);
-      if (session) {
-        session.lastActivity = Date.now();
-        session.lastFrame = data.frame; // Store the last frame
+  const timestamp = new Date().toISOString();
+  const now = Date.now();
+  
+  // Frame rate limiting
+  const lastFrameTime = frameTimestamps.get(socket.deviceId) || 0;
+  if (now - lastFrameTime < FRAME_INTERVAL) {
+    // Skip this frame to prevent overwhelming
+    return;
+  }
+  frameTimestamps.set(socket.deviceId, now);
+  
+  // Update last activity and store last frame (mobile devices only)
+  if (!socket.isWebClient) {
+    const session = activeSessions.get(socket.deviceId);
+    if (session) {
+      session.lastActivity = now;
+      
+      // Clear previous frame before storing new one (prevent memory accumulation)
+      if (session.lastFrame) {
+        delete session.lastFrame;
       }
+      session.lastFrame = data.frame;
     }
-    
-    // Broadcast to viewers (frontend clients)
-    const broadcastData = {
-      deviceId: socket.deviceId,
-      frame: data.frame,
-      timestamp: Date.now()
-    };
-    
-    // Count web clients for broadcasting
-    let webClientCount = 0;
-    io.sockets.sockets.forEach((clientSocket) => {
-      if (clientSocket.isWebClient) {
-        clientSocket.emit('camera-feed', broadcastData);
-        webClientCount++;
-      }
-    });
-    
-    // console.log(`[${timestamp}] 📡 Broadcasted camera feed to ${webClientCount} web clients`);
+  }
+  
+  // Broadcast to viewers (frontend clients)
+  const broadcastData = {
+    deviceId: socket.deviceId,
+    frame: data.frame,
+    timestamp: now
+  };
+  
+  // More efficient broadcasting - only to web clients
+  const webClients = [];
+  io.sockets.sockets.forEach((clientSocket) => {
+    if (clientSocket.isWebClient) {
+      webClients.push(clientSocket);
+    }
   });
+  
+  // Broadcast to all web clients
+  webClients.forEach(clientSocket => {
+    clientSocket.emit('camera-feed', broadcastData);
+  });
+  
+  // Occasional logging (every 50th frame)
+  if (frameTimestamps.get(socket.deviceId) % 5000 < FRAME_INTERVAL) {
+    console.log(`[${timestamp}] 📡 Broadcasted frame to ${webClients.length} web clients`);
+  }
+});
   
   // Handle snapshot request from frontend
   socket.on('request-snapshot', (data) => {
@@ -645,5 +667,41 @@ ${process.env.NODE_ENV !== 'production' ? '• GET  /api/debug/tokens - Debug to
     console.log('   Set it with: export DEVICE_SECRET="your-secret-here"');
   }
 });
+
+function cleanupInactiveSessions() {
+  const now = Date.now();
+  const INACTIVE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+  
+  for (const [deviceId, session] of activeSessions.entries()) {
+    if (now - session.lastActivity > INACTIVE_TIMEOUT) {
+      console.log(`🧹 Cleaning up inactive session: ${deviceId}`);
+      
+      // Clear the large frame data
+      if (session.lastFrame) {
+        delete session.lastFrame;
+      }
+      
+      activeSessions.delete(deviceId);
+    }
+  }
+  
+  // Also cleanup frame timestamps
+  for (const deviceId of frameTimestamps.keys()) {
+    if (!activeSessions.has(deviceId)) {
+      frameTimestamps.delete(deviceId);
+    } 
+  }
+}
+
+// Run cleanup every 5 minutes
+setInterval(cleanupInactiveSessions, 5 * 60 * 1000);
+
+function logMemoryUsage() {
+  const usage = process.memoryUsage();
+  console.log(`📊 Memory: ${Math.round(usage.heapUsed / 1024 / 1024)}MB used, ${activeSessions.size} sessions, ${frameTimestamps.size} frame buffers`);
+}
+
+// Log memory every 2 minutes
+setInterval(logMemoryUsage, 2 * 60 * 1000);
 
 module.exports = { app, server };
