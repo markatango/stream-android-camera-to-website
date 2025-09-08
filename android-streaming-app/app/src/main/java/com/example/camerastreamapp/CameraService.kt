@@ -41,20 +41,13 @@ class CameraService : Service(), LifecycleOwner {
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "camera_stream_channel"
 
-        // Configuration - Replace with your server details
+        // Configuration - reads from BuildConfig
         private val SERVER_URL = BuildConfig.SERVER_URL
-        private val DEVICE_SECRET = BuildConfig.DEVICE_SECRET // Replace with your secret
+        private val DEVICE_SECRET = BuildConfig.DEVICE_SECRET
 
-        // REMOTE SERVER OPTIMIZATION
-		private const val STREAM_FRAME_RATE = 2      // Much slower for remote
-		private const val JPEG_QUALITY = 30          // Very low quality for remote
-		// private const val MAX_IMAGE_WIDTH = 480      // Even smaller resolution
-		// private const val MAX_IMAGE_HEIGHT = 320     // Even smaller resolution
-		
-		private var lastFrameSentTime = 0L
-		private val frameInterval = 1000L / STREAM_FRAME_RATE  // milliseconds between frames
-    
-}
+        // OPTIMIZED FOR REMOTE SERVER
+        private const val STREAM_FRAME_RATE = 2  // Reduced from 5 to 2
+        private const val JPEG_QUALITY = 30      // Reduced from 70 to 30
     }
 
     // Lifecycle management
@@ -78,80 +71,68 @@ class CameraService : Service(), LifecycleOwner {
     // Socket.IO connection
     private var socket: Socket? = null
     private var authToken: String? = null
-    private var deviceId: String = generateDeviceId()
 
     // Service state
     private var isConnected = false
     private var isStreaming = false
-
-    // Coroutine scope
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var serviceCallback: ServiceCallback? = null
 
-    // Callback interface for activity updates
+    // Device identification
+    private val deviceId = "galaxy_s23_${System.currentTimeMillis()}_${(1000..9999).random()}"
+
     interface ServiceCallback {
         fun onConnectionStatusChanged(connected: Boolean)
         fun onStreamingStatusChanged(streaming: Boolean)
         fun onError(error: String)
     }
 
-    private var serviceCallback: ServiceCallback? = null
-
-    fun setServiceCallback(callback: ServiceCallback?) {
-        this.serviceCallback = callback
-    }
-
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "Service created")
-
+        Log.d(TAG, "=== CameraService onCreate ===")
         lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.CREATED
 
-        createNotificationChannel()
         cameraExecutor = Executors.newSingleThreadExecutor()
-
-        // Start as foreground service
+        createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification("Camera service starting..."))
 
-        // Initialize camera
         initializeCamera()
-
-        lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.STARTED
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            "CONNECT" -> connectToServer()
-            "DISCONNECT" -> disconnectFromServer()
-            "START_STREAMING" -> startStreaming()
-            "STOP_STREAMING" -> stopStreaming()
-        }
-
+        Log.d(TAG, "CameraService onStartCommand")
+        lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.STARTED
         return START_STICKY
     }
 
     override fun onBind(intent: Intent): IBinder {
+        Log.d(TAG, "CameraService onBind")
+        lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.RESUMED
         return binder
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        Log.d(TAG, "Service destroyed")
+    override fun onUnbind(intent: Intent?): Boolean {
+        Log.d(TAG, "CameraService onUnbind")
+        return super.onUnbind(intent)
+    }
 
+    override fun onDestroy() {
+        Log.d(TAG, "=== CameraService onDestroy ===")
+        super.onDestroy()
         lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.DESTROYED
 
-        cleanup()
+        socket?.disconnect()
+        cameraProvider?.unbindAll()
         cameraExecutor.shutdown()
         serviceScope.cancel()
     }
 
-    private fun generateDeviceId(): String {
-        return "galaxy_s23_${System.currentTimeMillis()}_${Random().nextInt(10000)}"
+    fun setServiceCallback(callback: ServiceCallback?) {
+        serviceCallback = callback
     }
 
     private fun initializeCamera() {
-        Log.d(TAG, "=== Initializing camera in service ===")
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
         cameraProviderFuture.addListener({
             try {
                 Log.d(TAG, "Camera provider future completed")
@@ -175,7 +156,7 @@ class CameraService : Service(), LifecycleOwner {
                 .build()
             Log.d(TAG, "ImageCapture created")
 
-            // Image analysis for streaming
+            // Image analysis for streaming - REMOVED deprecated setTargetResolution
             imageAnalyzer = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
@@ -218,7 +199,7 @@ class CameraService : Service(), LifecycleOwner {
                 return
             }
 
-            // Compress to JPEG
+            // Compress to JPEG with reduced quality for remote streaming
             val byteArrayOutputStream = ByteArrayOutputStream()
             val compressed = bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, byteArrayOutputStream)
             if (!compressed) {
@@ -227,6 +208,9 @@ class CameraService : Service(), LifecycleOwner {
             }
 
             val byteArray = byteArrayOutputStream.toByteArray()
+
+            // Log size reduction for debugging
+            Log.d(TAG, "Image processed: ${bitmap.width}x${bitmap.height} -> ${byteArray.size} bytes")
 
             // Convert to Base64
             val base64String = Base64.encodeToString(byteArray, Base64.NO_WRAP)
@@ -263,8 +247,6 @@ class CameraService : Service(), LifecycleOwner {
         }
     }
 
-    // Replace your existing convertYuv420888ToBitmap function with this version:
-
     private fun convertYuv420888ToBitmap(imageProxy: ImageProxy): Bitmap? {
         return try {
             val image = imageProxy.image ?: return null
@@ -282,29 +264,11 @@ class CameraService : Service(), LifecycleOwner {
             val uSize = uBuffer.remaining()
             val vSize = vBuffer.remaining()
 
-            // Device-specific UV plane detection
-            val deviceInfo = "${Build.MANUFACTURER} ${Build.MODEL} (API ${Build.VERSION.SDK_INT})"
-            Log.d(TAG, "Processing frame on device: $deviceInfo")
-
-            val needsUvSwap = detectUvSwapNeeded()
-            Log.d(TAG, "UV swap needed: $needsUvSwap")
-
             val data = ByteArray(ySize + uSize + vSize)
 
-            // Copy Y plane (always first)
             yBuffer.get(data, 0, ySize)
-
-            if (needsUvSwap) {
-                // Swap UV: V first, then U (for Samsung, some OnePlus, etc.)
-                vBuffer.get(data, ySize, vSize)
-                uBuffer.get(data, ySize + vSize, uSize)
-                Log.d(TAG, "Applied UV swap for device compatibility")
-            } else {
-                // Standard UV: U first, then V
-                uBuffer.get(data, ySize, uSize)
-                vBuffer.get(data, ySize + uSize, vSize)
-                Log.d(TAG, "Using standard UV order")
-            }
+            uBuffer.get(data, ySize, uSize)
+            vBuffer.get(data, ySize + uSize, vSize)
 
             val yuvImage = YuvImage(
                 data,
@@ -317,12 +281,12 @@ class CameraService : Service(), LifecycleOwner {
             val stream = ByteArrayOutputStream()
             yuvImage.compressToJpeg(
                 Rect(0, 0, imageProxy.width, imageProxy.height),
-                JPEG_QUALITY,
+                85,
                 stream
             )
 
             val jpegData = stream.toByteArray()
-            BitmapFactory.decodeByteArray(jpegData, 0, jpegData.size)
+            return BitmapFactory.decodeByteArray(jpegData, 0, jpegData.size)
 
         } catch (e: Exception) {
             Log.e(TAG, "Error converting YUV to bitmap", e)
@@ -330,133 +294,12 @@ class CameraService : Service(), LifecycleOwner {
         }
     }
 
-    // Device detection function - add this as a new function in your CameraService class
-    private fun detectUvSwapNeeded(): Boolean {
-        val manufacturer = Build.MANUFACTURER.lowercase()
-        val model = Build.MODEL.lowercase()
-        val brand = Build.BRAND.lowercase()
-        val sdk = Build.VERSION.SDK_INT
-
-        return when {
-            // Samsung devices (most common case)
-            manufacturer.contains("samsung") -> {
-                Log.d(TAG, "Samsung device detected - UV swap needed")
-                true
-            }
-
-            // OnePlus devices (varies by model)
-            manufacturer.contains("oneplus") -> {
-                val needsSwap = when {
-                    model.contains("7") || model.contains("8") || model.contains("9") -> true
-                    model.contains("nord") -> true
-                    sdk < 28 -> true // Older OnePlus devices
-                    else -> false
-                }
-                Log.d(TAG, "OnePlus device: $model, UV swap: $needsSwap")
-                needsSwap
-            }
-
-            // Some Xiaomi devices (older ones mainly)
-            manufacturer.contains("xiaomi") || brand.contains("redmi") -> {
-                val needsSwap = sdk < 28 // Older Xiaomi devices often need swap
-                Log.d(TAG, "Xiaomi/Redmi device, API $sdk, UV swap: $needsSwap")
-                needsSwap
-            }
-
-            // Some Huawei devices
-            manufacturer.contains("huawei") || brand.contains("honor") -> {
-                val needsSwap = sdk < 29
-                Log.d(TAG, "Huawei/Honor device, API $sdk, UV swap: $needsSwap")
-                needsSwap
-            }
-
-            // Oppo devices (some models)
-            manufacturer.contains("oppo") -> {
-                val needsSwap = model.contains("find") || sdk < 28
-                Log.d(TAG, "Oppo device: $model, UV swap: $needsSwap")
-                needsSwap
-            }
-
-            // Vivo devices (some models)
-            manufacturer.contains("vivo") -> {
-                val needsSwap = sdk < 28
-                Log.d(TAG, "Vivo device, API $sdk, UV swap: $needsSwap")
-                needsSwap
-            }
-
-            // Google Pixel and most other devices use standard format
-            manufacturer.contains("google") ||
-                    manufacturer.contains("sony") ||
-                    manufacturer.contains("motorola") ||
-                    manufacturer.contains("nokia") -> {
-                Log.d(TAG, "Standard UV format device: $manufacturer")
-                false
-            }
-
-            // Unknown devices - default to standard, but log for future reference
-            else -> {
-                Log.w(TAG, "Unknown device: $manufacturer $model - using standard UV format. " +
-                        "If colors are wrong, please report this device for database update.")
-                false
-            }
-        }
-    }
-
-    // Optional: Add a manual override function for testing
-    private fun testColorCorrection() {
-        // You can call this for testing specific devices
-        Log.d(TAG, "=== Device Color Test Info ===")
-        Log.d(TAG, "Manufacturer: ${Build.MANUFACTURER}")
-        Log.d(TAG, "Model: ${Build.MODEL}")
-        Log.d(TAG, "Brand: ${Build.BRAND}")
-        Log.d(TAG, "SDK Version: ${Build.VERSION.SDK_INT}")
-        Log.d(TAG, "UV Swap Needed: ${detectUvSwapNeeded()}")
-        Log.d(TAG, "=============================")
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Camera Stream Service",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Background camera streaming service"
-                setShowBadge(false)
-            }
-
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
-    }
-
-    private fun createNotification(content: String): Notification {
-        val intent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Camera Stream")
-            .setContentText(content)
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .build()
-    }
-
-    private fun updateNotification(content: String) {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(NOTIFICATION_ID, createNotification(content))
-    }
-
     private fun authenticateWithServer() {
         serviceScope.launch(Dispatchers.IO) {
             try {
                 Log.d(TAG, "Starting authentication to: $SERVER_URL")
                 Log.d(TAG, "Device ID: $deviceId")
-                Log.d(TAG, "Device Secret: ${DEVICE_SECRET.take(10)}...") // Only log first 10 chars for security
+                Log.d(TAG, "Device Secret: ${DEVICE_SECRET.take(10)}...")
 
                 val client = OkHttpClient.Builder()
                     .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
@@ -468,8 +311,6 @@ class CameraService : Service(), LifecycleOwner {
                     put("deviceSecret", DEVICE_SECRET)
                 }
 
-                Log.d(TAG, "Authentication payload: $json")
-
                 val requestBody = json.toString().toRequestBody("application/json".toMediaType())
                 val request = Request.Builder()
                     .url("$SERVER_URL/api/authenticate")
@@ -477,12 +318,8 @@ class CameraService : Service(), LifecycleOwner {
                     .addHeader("Content-Type", "application/json")
                     .build()
 
-                Log.d(TAG, "Sending authentication request...")
                 val response = client.newCall(request).execute()
-                Log.d(TAG, "Response code: ${response.code}")
-
                 val responseBody = response.body?.string()
-                Log.d(TAG, "Response body: $responseBody")
 
                 if (response.isSuccessful) {
                     val jsonResponse = JSONObject(responseBody ?: "{}")
@@ -491,7 +328,6 @@ class CameraService : Service(), LifecycleOwner {
                     if (authToken != null) {
                         Log.d(TAG, "Authentication successful, token received")
 
-                        // Save token to shared preferences
                         getSharedPreferences("camera_stream", Context.MODE_PRIVATE)
                             .edit()
                             .putString("auth_token", authToken)
@@ -508,7 +344,6 @@ class CameraService : Service(), LifecycleOwner {
                     }
                 } else {
                     Log.e(TAG, "Authentication failed: HTTP ${response.code}")
-                    Log.e(TAG, "Error response: $responseBody")
 
                     val errorMessage = when (response.code) {
                         401 -> "Unauthorized - Check device secret"
@@ -521,21 +356,6 @@ class CameraService : Service(), LifecycleOwner {
                         serviceCallback?.onError(errorMessage)
                     }
                 }
-            } catch (e: java.net.ConnectException) {
-                Log.e(TAG, "Connection failed - server unreachable", e)
-                withContext(Dispatchers.Main) {
-                    serviceCallback?.onError("Cannot reach server. Check IP and network.")
-                }
-            } catch (e: java.net.UnknownHostException) {
-                Log.e(TAG, "Unknown host - DNS resolution failed", e)
-                withContext(Dispatchers.Main) {
-                    serviceCallback?.onError("Cannot resolve server address. Check IP.")
-                }
-            } catch (e: java.net.SocketTimeoutException) {
-                Log.e(TAG, "Request timeout", e)
-                withContext(Dispatchers.Main) {
-                    serviceCallback?.onError("Server timeout. Check if server is running.")
-                }
             } catch (e: Exception) {
                 Log.e(TAG, "Authentication error: ${e.javaClass.simpleName}", e)
                 withContext(Dispatchers.Main) {
@@ -547,7 +367,6 @@ class CameraService : Service(), LifecycleOwner {
 
     private fun connectSocketIO() {
         try {
-            // Clear any existing socket connection
             socket?.disconnect()
             socket = null
 
@@ -555,7 +374,7 @@ class CameraService : Service(), LifecycleOwner {
 
             val opts = IO.Options().apply {
                 auth = mapOf("token" to (authToken ?: ""))
-                forceNew = true  // Force new connection
+                forceNew = true
                 reconnection = true
                 reconnectionAttempts = 3
                 reconnectionDelay = 1000
@@ -568,8 +387,6 @@ class CameraService : Service(), LifecycleOwner {
                 isConnected = true
                 updateNotification("Connected to server")
                 serviceCallback?.onConnectionStatusChanged(true)
-
-                // Auto-start streaming when connected
                 startStreaming()
             }
 
@@ -585,23 +402,17 @@ class CameraService : Service(), LifecycleOwner {
 
             socket?.on(Socket.EVENT_CONNECT_ERROR) { args ->
                 Log.e(TAG, "Socket connection error: ${args.contentToString()}")
-
-                // Check if it's an authentication error
                 val errorMessage = args.firstOrNull()?.toString() ?: ""
+
                 if (errorMessage.contains("Authentication failed") || errorMessage.contains("Invalid or expired token")) {
                     Log.w(TAG, "Token invalid, clearing and re-authenticating...")
-
-                    // Clear stored token
                     getSharedPreferences("camera_stream", Context.MODE_PRIVATE)
                         .edit()
                         .remove("auth_token")
                         .apply()
-
                     authToken = null
-
-                    // Re-authenticate with fresh token
                     serviceScope.launch {
-                        delay(1000) // Wait a bit before retrying
+                        delay(1000)
                         authenticateWithServer()
                     }
                 } else {
@@ -643,7 +454,6 @@ class CameraService : Service(), LifecycleOwner {
             updateNotification("Streaming active")
             serviceCallback?.onStreamingStatusChanged(true)
 
-            // Notify server of state change
             val data = JSONObject().apply {
                 put("isStreaming", true)
                 put("deviceId", deviceId)
@@ -664,7 +474,6 @@ class CameraService : Service(), LifecycleOwner {
             updateNotification("Streaming stopped")
             serviceCallback?.onStreamingStatusChanged(false)
 
-            // Notify server of state change
             val data = JSONObject().apply {
                 put("isStreaming", false)
                 put("deviceId", deviceId)
@@ -682,8 +491,6 @@ class CameraService : Service(), LifecycleOwner {
 
         serviceScope.launch(Dispatchers.IO) {
             try {
-                // This is a simplified snapshot - in production you'd want to
-                // capture a high-quality image using ImageCapture
                 val dummyBase64 = "dummy_snapshot_data"
                 val data = JSONObject().apply {
                     put("imageData", dummyBase64)
@@ -701,16 +508,12 @@ class CameraService : Service(), LifecycleOwner {
     // Public methods for MainActivity
     fun connectToServer() {
         if (!isConnected) {
-            // Clear any old token first
             Log.d(TAG, "Clearing any existing token and starting fresh authentication")
             getSharedPreferences("camera_stream", Context.MODE_PRIVATE)
                 .edit()
                 .remove("auth_token")
                 .apply()
-
             authToken = null
-
-            // Always authenticate fresh
             authenticateWithServer()
         }
     }
@@ -738,44 +541,22 @@ class CameraService : Service(), LifecycleOwner {
     fun isServiceStreaming(): Boolean = isStreaming
     fun getCameraDeviceId(): String = deviceId
 
-    // Set up camera preview for MainActivity
     fun setupPreviewForActivity(previewView: androidx.camera.view.PreviewView) {
         Log.d(TAG, "Request to setup camera preview for MainActivity...")
 
         serviceScope.launch(Dispatchers.Main) {
             try {
-                // Wait for camera provider to be ready
                 if (cameraProvider == null) {
-                    Log.d(TAG, "Camera provider not ready yet, waiting...")
-                    // Wait up to 5 seconds for camera provider to be ready
-                    var attempts = 0
-                    while (cameraProvider == null && attempts < 50) {
-                        delay(100)
-                        attempts++
-                    }
-
-                    if (cameraProvider == null) {
-                        Log.e(TAG, "Camera provider still not ready after waiting")
-                        return@launch
-                    }
+                    Log.w(TAG, "Camera provider not ready yet")
+                    return@launch
                 }
 
-                Log.d(TAG, "Camera provider ready, setting up preview...")
-
-                // Create preview for MainActivity
-                val preview = Preview.Builder()
-                    .setTargetResolution(android.util.Size(720, 1280))
-                    .build().also {
-                        Log.d(TAG, "Setting surface provider for MainActivity preview")
-                        it.setSurfaceProvider(previewView.surfaceProvider)
-                    }
+                val preview = Preview.Builder().build()
+                preview.setSurfaceProvider(previewView.surfaceProvider)
 
                 val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
-                // Unbind and rebind with preview included
                 cameraProvider?.unbindAll()
-
-                // Bind preview along with existing use cases
                 camera = cameraProvider?.bindToLifecycle(
                     this@CameraService,
                     cameraSelector,
@@ -784,17 +565,48 @@ class CameraService : Service(), LifecycleOwner {
                     imageAnalyzer
                 )
 
-                Log.d(TAG, "=== MainActivity camera preview bound successfully ===")
+                Log.d(TAG, "Camera preview setup successful for MainActivity")
 
             } catch (exc: Exception) {
-                Log.e(TAG, "Failed to setup preview for MainActivity", exc)
+                Log.e(TAG, "Camera preview setup failed", exc)
             }
         }
     }
 
-    private fun cleanup() {
-        stopStreaming()
-        cameraProvider?.unbindAll()
-        socket?.disconnect()
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Camera Stream Service",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Background camera streaming service"
+                setShowBadge(false)
+            }
+
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun createNotification(content: String): Notification {
+        val intent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Camera Stream")
+            .setContentText(content)
+            .setSmallIcon(android.R.drawable.ic_menu_camera)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .build()
+    }
+
+    private fun updateNotification(content: String) {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, createNotification(content))
     }
 }
