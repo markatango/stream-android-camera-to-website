@@ -1,4 +1,12 @@
-# Stream android camera to website in real-time
+# Real-Time Android Camera Streaming System
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green.svg)
+![Node.js](https://img.shields.io/badge/node.js-v20.0.0-brightgreen.svg)
+![React](https://img.shields.io/badge/react-v19.1.1-blue.svg)
+![Android](https://img.shields.io/badge/android-API%2024%2B-green.svg)
+![Status](https://img.shields.io/badge/status-active-success.svg)
+
 This repo comprises an Android app, a web server, and a web client.
 
 ## Function
