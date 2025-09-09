@@ -13,6 +13,9 @@
 ![Frame Rate](https://img.shields.io/badge/frame%20rate-2--30%20FPS-blue.svg)
 ![Compression](https://img.shields.io/badge/compression-85%25%20reduction-green.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
+![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)
+![Coverage](https://img.shields.io/badge/coverage-27.68%25-yellow.svg)
+![Jest](https://img.shields.io/badge/tested%20with-jest-99424f.svg)
 
 
 This repo comprises an Android app, a web server, and a web client.

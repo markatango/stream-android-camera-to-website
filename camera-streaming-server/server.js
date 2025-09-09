@@ -634,8 +634,11 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`
+
+// Only start server if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => {
+    console.log(`
 🚀 Camera Stream Server Started!
 📍 Port: ${PORT}
 🔑 Device Secret: ${process.env.DEVICE_SECRET ? 'Configured' : '❌ NOT SET'}
@@ -643,19 +646,31 @@ server.listen(PORT, () => {
 📊 Environment: ${process.env.NODE_ENV || 'development'}
 
 Available endpoints:
-• GET  /api/health     - Server health check
-• POST /api/authenticate - Device authentication
-• GET  /api/devices    - List active devices
+- GET  /api/health     - Server health check
+- POST /api/authenticate - Device authentication
+- GET  /api/devices    - List active devices
 ${process.env.NODE_ENV !== 'production' ? '• GET  /api/debug/tokens - Debug tokens (dev only)' : ''}
 
 🎯 Ready to accept connections!
 `);
-  
-  if (!process.env.DEVICE_SECRET) {
-    console.log('⚠️  WARNING: DEVICE_SECRET environment variable is not set!');
-    console.log('   Set it with: export DEVICE_SECRET="your-secret-here"');
-  }
-});
+    
+    if (!process.env.DEVICE_SECRET) {
+      console.log('⚠️  WARNING: DEVICE_SECRET environment variable is not set!');
+      console.log('   Set it with: export DEVICE_SECRET="your-secret-here"');
+    }
+  });
+
+  // Run cleanup every 5 minutes
+setInterval(cleanupInactiveSessions, 5 * 60 * 1000);
+
+function logMemoryUsage() {
+  const usage = process.memoryUsage();
+  console.log(`📊 Memory: ${Math.round(usage.heapUsed / 1024 / 1024)}MB used, ${activeSessions.size} sessions, ${frameTimestamps.size} frame buffers`);
+}
+
+// Log memory every 2 minutes
+setInterval(logMemoryUsage, 2 * 60 * 1000);
+}
 
 function cleanupInactiveSessions() {
   const now = Date.now();
@@ -682,15 +697,8 @@ function cleanupInactiveSessions() {
   }
 }
 
-// Run cleanup every 5 minutes
-setInterval(cleanupInactiveSessions, 5 * 60 * 1000);
 
-function logMemoryUsage() {
-  const usage = process.memoryUsage();
-  console.log(`📊 Memory: ${Math.round(usage.heapUsed / 1024 / 1024)}MB used, ${activeSessions.size} sessions, ${frameTimestamps.size} frame buffers`);
-}
 
-// Log memory every 2 minutes
-setInterval(logMemoryUsage, 2 * 60 * 1000);
-
-module.exports = { app, server };
+// module.exports = { app, server };
+// Export for testing
+module.exports = { app, server, io };
