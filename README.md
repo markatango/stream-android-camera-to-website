@@ -21,12 +21,12 @@
 This repo comprises an Android app, a web server, and a web client.
 
 ## Function
-This software allows an Android phone to stream video from its camera to a website in real-time.  The website serves a client that allows a user to see the camera image, start and stop streaming, and take snapshots.
+This software allows an Android phone to stream video from its camera to a website in real-time.  The website serves a client that displays the streaming camera image, has controls to start and stop streaming, and take snapshots.
 
 ## Tested platform versions
 * __Server and client__:
 
-node version: 20,0,0
+node version: 20.0.0
 
 npm version: 9.8.1
 
@@ -82,7 +82,7 @@ Alternatively, run `npm run build` to build a performant client. See `nginx serv
 
 ### Android application build and installation
 1. Open the Android project in Android Studio.
-2. Add the following lines to `local.properties` file in the root folder:
+2. Create a `local.properties` file in the root folder and add these elements:
    - `DEVICE_SECRET=<your-secret-key>` to the `local.properties` //  Make sure this value matches the one you put in the server `.env` file.
    - `SERVER_URL=http://<your server ip>`  # Note: port number is not needed if you use something like the example NGINX server block.
 3. Enable Developer Mode on your Android phone.  Note: consult the Internet to learn how to do this.
@@ -96,6 +96,6 @@ This is pretty self-explanatory.  The `main` branch supports firebase authentica
 2. Press "Connect".
 3. Refresh the webpage, or press the `Refresh Devices` button on the webpage.
 4. Select your phone from the list of available devices.
-5. Press `Start Streaming` or `Stop Streaming` on your phone or on the web page as you wish.  The phone state and wewb page state are synchronized.
+5. Press `Start Streaming` or `Stop Streaming` on your phone or on the web page as you wish.  The phone state and web page state are synchronized.
 
    
