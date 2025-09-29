@@ -7,6 +7,6 @@ NODE_ENV=production
 # 2. Camera Client .env file (camera-streaming-viewer/.env)
 REACT_APP_BACKEND_URL=https://<your domain>
 
-# 3. Android local.properties (same as before)
-DEVICE_SECRET=your-secret-key
+# 3. Android local.properties 
+DEVICE_SECRET=your-secret-key (same as in #1, above)
 SERVER_URL=https://<your domain>
